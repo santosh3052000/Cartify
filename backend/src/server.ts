@@ -2,41 +2,32 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
+import { query } from './db/postgres';
+import redis from './db/redis';
 
-const fastify = Fastify({
-  logger: {
-    level: 'info',
-    transport: {
-      target: 'pino-pretty',
-      options: { translateTime: 'HH:MM:ss Z', ignore: 'pid,hostname' }
-    }
-  }
+const fastify = Fastify({ logger: true });
+
+// Health check
+fastify.get('/health', async () => ({ status: 'ok' }));
+
+// DB test endpoint
+fastify.get('/db-test', async () => {
+  const result = await query('SELECT COUNT(*) FROM products');
+  return { productCount: parseInt(result.rows[0].count, 10) };
 });
 
-// Health check endpoint
-fastify.get('/health', async () => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
+// Redis test endpoint
+fastify.get('/redis-test', async () => {
+  await redis.set('test-key', 'hello');
+  const value = await redis.get('test-key');
+  return { redisValue: value };
 });
 
-// Root endpoint
-fastify.get('/', async () => {
-  return { service: 'Rubick Catalog Engine API', version: '1.0.0' };
-});
-
-// Start server (register plugins inside async function)
 const start = async () => {
-  // Register plugins (must be inside async function to use await)
   await fastify.register(cors);
   await fastify.register(helmet);
   await fastify.register(rateLimit, { max: 100, timeWindow: 60000 });
-
-  try {
-    await fastify.listen({ port: 3000, host: '0.0.0.0' });
-    fastify.log.info('Server listening on http://localhost:3000');
-  } catch (err) {
-    fastify.log.error(err);
-    process.exit(1);
-  }
+  await fastify.listen({ port: 3000, host: '0.0.0.0' });
+  console.log('Server ready');
 };
-
 start();
