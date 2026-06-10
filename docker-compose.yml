@@ -36,8 +36,8 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: ../docker/Dockerfile.backend
+      context: .
+      dockerfile: docker/Dockerfile.backend
     container_name: rubick_backend
     ports:
       - "3000:3000"
@@ -57,27 +57,24 @@ services:
 
   ml-service:
     build:
-      context: ./ml-service
-      dockerfile: ../docker/Dockerfile.ml
+      context: .
+      dockerfile: docker/Dockerfile.ml
     container_name: rubick_ml
     ports:
       - "8000:8000"
     environment:
       PYTHONUNBUFFERED: 1
       DATABASE_URL: postgresql://rubick:rubick123@postgres:5432/catalog_db
-      REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     volumes:
       - ./ml-service:/app
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: ../docker/Dockerfile.frontend
+      context: .
+      dockerfile: docker/Dockerfile.frontend
     container_name: rubick_frontend
     ports:
       - "5173:5173"
@@ -86,6 +83,7 @@ services:
       VITE_ML_URL: http://localhost:8000
     depends_on:
       - backend
+      - ml-service
     volumes:
       - ./frontend:/app
       - /app/node_modules
